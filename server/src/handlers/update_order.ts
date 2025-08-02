@@ -1,23 +1,54 @@
 
+import { db } from '../db';
+import { ordersTable } from '../db/schema';
 import { type UpdateOrderInput, type Order } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function updateOrder(input: UpdateOrderInput): Promise<Order> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is updating order status, delivery, and payment information.
-    // Should update the updated_at timestamp and handle SLA tracking.
-    return Promise.resolve({
-        id: input.id,
-        lead_id: 0, // Would be fetched from existing order
-        product_type: '', // Would be fetched from existing order
-        price: 0, // Would be fetched from existing order
-        quantity: 0, // Would be fetched from existing order
-        special_notes: input.special_notes || null,
-        delivery_status: input.delivery_status || 'not_started',
-        payment_status: input.payment_status || 'pending',
-        order_status: input.order_status || 'pending',
-        created_at: new Date(), // Would be actual creation date
-        updated_at: new Date(),
-        estimated_delivery: input.estimated_delivery || null,
-        actual_delivery: input.actual_delivery || null
-    } as Order);
-}
+export const updateOrder = async (input: UpdateOrderInput): Promise<Order> => {
+  try {
+    // Build update object with only provided fields
+    const updateData: any = {
+      updated_at: new Date()
+    };
+
+    if (input.delivery_status !== undefined) {
+      updateData.delivery_status = input.delivery_status;
+    }
+    if (input.payment_status !== undefined) {
+      updateData.payment_status = input.payment_status;
+    }
+    if (input.order_status !== undefined) {
+      updateData.order_status = input.order_status;
+    }
+    if (input.special_notes !== undefined) {
+      updateData.special_notes = input.special_notes;
+    }
+    if (input.estimated_delivery !== undefined) {
+      updateData.estimated_delivery = input.estimated_delivery;
+    }
+    if (input.actual_delivery !== undefined) {
+      updateData.actual_delivery = input.actual_delivery;
+    }
+
+    // Update the order
+    const result = await db.update(ordersTable)
+      .set(updateData)
+      .where(eq(ordersTable.id, input.id))
+      .returning()
+      .execute();
+
+    if (result.length === 0) {
+      throw new Error(`Order with id ${input.id} not found`);
+    }
+
+    // Convert numeric price back to number
+    const order = result[0];
+    return {
+      ...order,
+      price: parseFloat(order.price)
+    };
+  } catch (error) {
+    console.error('Order update failed:', error);
+    throw error;
+  }
+};

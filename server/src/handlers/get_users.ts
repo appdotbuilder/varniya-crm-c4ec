@@ -1,9 +1,25 @@
 
+import { db } from '../db';
+import { usersTable } from '../db/schema';
 import { type User } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export async function getUsers(role?: string): Promise<User[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is fetching users/agents for assignment and filtering purposes.
-    // Should support filtering by role (e.g., only sales_agents for lead assignment).
-    return Promise.resolve([]);
+  try {
+    if (role) {
+      const results = await db.select()
+        .from(usersTable)
+        .where(eq(usersTable.role, role as any))
+        .execute();
+      return results;
+    } else {
+      const results = await db.select()
+        .from(usersTable)
+        .execute();
+      return results;
+    }
+  } catch (error) {
+    console.error('Failed to fetch users:', error);
+    throw error;
+  }
 }
